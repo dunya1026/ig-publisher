@@ -1,0 +1,62 @@
+name: instagram-publish
+
+on:
+  schedule:
+    # 매시 7분, KST 08~19시 (UTC 23~10시). 분야별 게시 시각은 IG_SLOTS로 결정
+    - cron: "7 23,0-10 * * *"
+  workflow_dispatch:
+    inputs:
+      page:
+        description: "특정 노션 페이지 ID만 게시 (비우면 규칙대로)"
+        required: false
+      dry_run:
+        description: "게시하지 않고 이미지만 만들기"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: instagram-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 한글 폰트 설치
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq fonts-noto-cjk
+
+      - run: pip install -r requirements.txt
+
+      - name: 게시
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATA_SOURCE_ID: ${{ secrets.NOTION_DATA_SOURCE_ID }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IG_HANDLE: ${{ vars.IG_HANDLE }}
+          IG_SLOTS: ${{ vars.IG_SLOTS || '부동산=8,금융=13,생활꿀팁=17' }}
+          IG_MAX_PER_DAY: ${{ vars.IG_MAX_PER_DAY || '3' }}
+          IG_HASHTAG_COUNT: ${{ vars.IG_HASHTAG_COUNT || '15' }}
+        run: |
+          ARGS=""
+          if [ -n "${{ inputs.page }}" ]; then ARGS="$ARGS --page ${{ inputs.page }}"; fi
+          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          python -m ig_publisher.main $ARGS
+
+      - name: dry-run 결과 보관
+        if: ${{ inputs.dry_run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cards-preview
+          path: out/

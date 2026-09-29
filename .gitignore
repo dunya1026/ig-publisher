@@ -1,0 +1,4 @@
+out/
+cards/
+__pycache__/
+.env
