@@ -59,16 +59,17 @@ def build_caption(page: dict, slides: list[dict], n_tags: int, cta: str) -> str:
     else:
         cover = slides[0]
         head = N.text(page, "제목")
-        lines = [head, ""]
+        lines = []
+        if cover.get("hook"):
+            lines += [cover["hook"], ""]
+        lines += [head, ""]
         if cover.get("subtitle"):
             lines += [cover["subtitle"], ""]
-        pts = []
-        for s in slides:
-            if s["type"] in ("list", "numbered"):
-                for it in s["items"]:
-                    label, text = it[-2], it[-1]
-                    pts.append(f"✔️ {label}: {text}" if label else f"✔️ {text}")
-        lines += pts[:4]
+        # 답을 캡션에 다 풀지 않고, 카드에 무엇이 있는지만 예고 → 넘겨보게 유도
+        toc = [s["title"] for s in slides if s["type"] in ("list", "numbered")]
+        if toc:
+            lines.append("카드로 정리했어요, 옆으로 넘겨보세요 👉")
+            lines += [f"✔️ {t}" for t in toc[:4]]
         body = "\n".join(lines).strip()
 
     parts = [body]

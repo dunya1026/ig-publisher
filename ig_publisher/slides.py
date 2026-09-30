@@ -5,10 +5,10 @@
 2) 없으면 블로그 본문 블록에서 자동 추출 (글머리/번호 목록 기반)
 
 슬라이드 dict 형식
-  {"type": "cover",   "title": str, "subtitle": str}
-  {"type": "list",    "title": str, "items": [(label, text), ...]}
-  {"type": "numbered","title": str, "items": [(label, text), ...]}
-  {"type": "closing", "text": str}
+  {"type": "cover",   "title": str, "subtitle": str, "hook": str, "swipe": str}
+  {"type": "list",    "title": str, "items": [(label, text), ...], "teaser": str}
+  {"type": "numbered","title": str, "items": [(label, text), ...], "teaser": str}
+  {"type": "closing", "text": str, "action": str}
 """
 from __future__ import annotations
 
@@ -47,9 +47,16 @@ def from_ig_text(text: str, fallback_title: str) -> list[dict]:
         ## 체크포인트
         1. 계약일 확인: 8월 3일 이전 계약금 지급 여부
         정리: 갈아타기 계획이 있다면 날짜부터 확인하세요
+
+    선택 줄(있으면 반영, 없으면 기본값)
+        훅: 표지 제목 위 한 줄 질문 (캡션 첫 줄에도 사용)
+        넘김: 표지 하단 '넘겨보기' 문구
+        > 문구   (## 슬라이드 안) 그 장 하단에 다음 장 예고
+        행동: 마지막 장 하단 행동 유도 문구
     """
     slides: list[dict] = []
     title, subtitle, closing = fallback_title, "", ""
+    hook, swipe, action = "", "", ""
     current: dict | None = None
     for raw in text.splitlines():
         line = raw.strip()
@@ -61,6 +68,14 @@ def from_ig_text(text: str, fallback_title: str) -> list[dict]:
             subtitle = line[3:].strip()
         elif line.startswith("정리:"):
             closing = line[3:].strip()
+        elif line.startswith("훅:"):
+            hook = line[2:].strip()
+        elif line.startswith("넘김:"):
+            swipe = line[3:].strip()
+        elif line.startswith("행동:"):
+            action = line[3:].strip()
+        elif line.startswith(">") and current is not None:
+            current["teaser"] = line.lstrip(">").strip()
         elif line.startswith("## "):
             current = {"type": "list", "title": line[3:].strip(), "items": []}
             slides.append(current)
@@ -69,9 +84,9 @@ def from_ig_text(text: str, fallback_title: str) -> list[dict]:
             current["items"].append(_split_item(line))
         elif line.startswith(("- ", "• ")) and current is not None:
             current["items"].append(_split_item(line))
-    out = [{"type": "cover", "title": title, "subtitle": subtitle}] + slides
+    out = [{"type": "cover", "title": title, "subtitle": subtitle, "hook": hook, "swipe": swipe}] + slides
     if closing:
-        out.append({"type": "closing", "text": closing})
+        out.append({"type": "closing", "text": closing, "action": action})
     return _finalize(out)
 
 

@@ -166,6 +166,11 @@ def render_cover(slide, category, date_label, handle, total):
     f = font(size, "bold")
     lines = [ln for part in title_lines_raw for ln in wrap(d, part, f, max_w)]
     y = 330
+    if slide.get("hook"):
+        fh = font(44, "bold")
+        hl = wrap(d, slide["hook"], fh, max_w)[:2]
+        hy = y - 30 - len(hl) * _line_h(fh)
+        _draw_lines(d, (PAD, max(PAD + 90, hy)), hl, fh, (255, 236, 200))
     y = _draw_lines(d, (PAD, y), lines, f, WHITE)
 
     if slide.get("subtitle"):
@@ -185,7 +190,7 @@ def render_cover(slide, category, date_label, handle, total):
         _draw_lines(d, (PAD, y + 80), sub, fs, (255, 255, 255))
 
     f2 = font(30, "bold")
-    swipe = "옆으로 넘겨보세요  →"
+    swipe = (slide.get("swipe") or "옆으로 넘겨보세요").rstrip(" →") + "  →"
     d.text((W - PAD - _text_w(d, swipe, f2), H - 132), swipe, font=f2, fill=WHITE)
     _footer(d, 1, total, handle, WHITE)
     return img
@@ -195,6 +200,7 @@ LARGE_SCALES = [(50, 46), (46, 42), (42, 40)]
 TYPE_SCALES = [(38, 36), (36, 34), (34, 32)]  # (라벨, 본문) 크기, 장 수가 넘치면 작은 단계로
 ITEM_GAP = 22
 TITLE_TOP = PAD + 110
+TEASER_H = 76
 
 
 def _item_block(d, label, text, numbered, scale):
@@ -220,7 +226,7 @@ def paginate(section, scale, d=None):
     pages, cur, used = [], [], 0
     title = section["title"]
     _, _, top = _title_block(d, title)
-    avail = H - 130 - top
+    avail = H - 130 - top - (TEASER_H if section.get("teaser") else 0)
     for n, (label, text) in enumerate(section["items"], start=1):
         _, _, h = _item_block(d, label, text, numbered, scale)
         if cur and used + h > avail:
@@ -243,7 +249,8 @@ def paginate(section, scale, d=None):
     out = []
     for i, items in enumerate(pages):
         out.append({"type": section["type"], "items": items, "scale": scale,
-                    "title": title if i == 0 else f"{title} (계속)"})
+                    "title": title if i == 0 else f"{title} (계속)",
+                    "teaser": section.get("teaser", "") if i == len(pages) - 1 else ""})
     return out
 
 
@@ -278,6 +285,13 @@ def render_list(slide, category, handle, idx, total):
             ty = _draw_lines(d, (x, ty), lab, fl, accent) + 8
         _draw_lines(d, (x, ty), body, fb, INK)
         y += h + ITEM_GAP
+
+    if slide.get("teaser"):
+        ft2 = font(32, "bold")
+        t = "다음 장  " + slide["teaser"].rstrip(" →") + "  →"
+        while _text_w(d, t, ft2) > W - PAD * 2 and ft2.size > 24:
+            ft2 = font(ft2.size - 2, "bold")
+        d.text((W - PAD - _text_w(d, t, ft2), H - 138), t, font=ft2, fill=accent)
 
     _footer(d, idx, total, handle, MUTED)
     return img
@@ -318,7 +332,9 @@ def render_closing(slide, category, handle, idx, total, disclaimer):
     y = _draw_lines(d, (PAD, 330), lines, f, WHITE)
 
     fs = font(34, "bold")
-    d.text((PAD, y + 70), "저장해두고 필요할 때 꺼내보세요", font=fs, fill=accent)
+    act = slide.get("action") or "저장해두고 필요할 때 꺼내보세요"
+    for i, ln in enumerate(wrap(d, act, fs, W - PAD * 2)[:2]):
+        d.text((PAD, y + 70 + i * _line_h(fs)), ln, font=fs, fill=accent)
 
     if disclaimer:
         fd = font(24, "regular")
