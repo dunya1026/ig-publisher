@@ -2,8 +2,9 @@ name: instagram-publish
 
 on:
   schedule:
-    # 매시 7분, KST 08~19시 (UTC 23~10시). 분야별 게시 시각은 IG_SLOTS로 결정
-    - cron: "7 23,0-10 * * *"
+    # 20분마다(13·33·53분), KST 07~19시 (UTC 22~10시). 분야별 게시 시각은 IG_SLOTS로 결정
+    # GitHub 예약 실행은 지연·누락이 잦아 자주 확인해 놓침을 줄임 (게시할 원고가 없으면 20초 안에 종료)
+    - cron: "13,33,53 22,23,0-10 * * *"
   workflow_dispatch:
     inputs:
       page:

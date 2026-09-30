@@ -8,7 +8,7 @@ GitHub Actions에서 돌아가므로 PC가 꺼져 있어도 되고, 비용은 �
 ```
 05:50  Claude 예약 작업: 블로그 원고 + '인스타슬라이드' 문구 작성 → 노션 (상태=발행대기, 인스타상태=인스타대기)
 07/12/16시  Mac 매크로: 네이버 블로그 발행 → 상태=발행완료
-매시 7분  GitHub Actions: 발행완료 + 인스타대기 + 오늘 작성 + 게시 시각 지난 원고
+20분마다 GitHub Actions: 발행완료 + 인스타대기 + 오늘 작성 + 게시 시각 지난 원고
            → 카드 이미지 생성 → ig-cards 브랜치에 업로드(공개 URL) → Instagram Graph API 캐러셀 게시
            → 인스타상태=인스타완료, 인스타URL 기록 (실패 시 인스타실패 + 인스타오류)
 ```
@@ -110,7 +110,7 @@ GitHub Actions에서 돌아가므로 PC가 꺼져 있어도 되고, 비용은 �
    (dry-run도 오늘 발행완료 + 인스타대기 원고가 있어야 결과가 나옵니다. 특정 원고로 보려면 `page`에 노션 페이지 ID 입력)
 2. 실제 게시 테스트: `page`에 원고 페이지 ID를 넣고 dry_run 해제 → 실행 → 인스타에 올라왔는지, 노션에 인스타완료·인스타URL이 찍혔는지 확인.
    노션 페이지 ID는 페이지 주소 끝의 32자리입니다.
-3. 이후로는 매시 7분에 자동 실행됩니다.
+3. 이후로는 KST 07~19시 20분마다(13·33·53분) 자동 실행됩니다.
 
 ## 매일 운영
 
@@ -143,7 +143,7 @@ Mac에서 한글 폰트는 Apple SD Gothic Neo를 자동으로 씁니다. Noto S
 ## 파일 구성
 
 ```
-.github/workflows/instagram.yml   예약 실행(매시 7분, KST 08~19시)
+.github/workflows/instagram.yml   예약 실행(20분마다, KST 07~19시)
 ig_publisher/main.py              선정 규칙·캡션·전체 흐름
 ig_publisher/slides.py            인스타슬라이드/블로그 본문 → 슬라이드 구성
 ig_publisher/render.py            카드 이미지 그리기 (Pillow)
