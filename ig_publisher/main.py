@@ -104,6 +104,27 @@ def candidates(nc, ds_id, today, now_hour, slots, force_page=None):
     return sorted(ready, key=lambda p: order.get(N.text(p, "분야"), 99))
 
 
+BLOCK_MARKERS = ("2207051", "request limit reached")  # 인스타 활동 제한 / 호출 한도 초과
+COOLDOWN_HOURS = int(os.environ.get("IG_COOLDOWN_HOURS", "24") or 24)
+
+
+def recently_blocked(nc, ds_id, now) -> str | None:
+    """최근 COOLDOWN_HOURS 안에 활동 제한으로 실패한 원고가 있으면 그 오류를 돌려줌.
+    제한이 걸린 동안 계속 시도하면 제한이 길어질 수 있어 자동 게시를 쉼."""
+    since = (now - dt.timedelta(hours=COOLDOWN_HOURS)).isoformat()
+    flt = {"and": [
+        {"property": "인스타상태", "select": {"equals": "인스타실패"}},
+        {"timestamp": "last_edited_time", "last_edited_time": {"on_or_after": since}},
+        {"or": [{"property": "인스타오류", "rich_text": {"contains": m}} for m in BLOCK_MARKERS]},
+    ]}
+    try:
+        pages = nc.query(ds_id, flt)
+    except Exception as e:  # 확인 자체가 실패하면 게시는 그대로 진행
+        print(f"활동 제한 확인 실패(무시하고 진행): {e}")
+        return None
+    return N.text(pages[0], "인스타오류")[:200] if pages else None
+
+
 def posted_today(nc, ds_id, today) -> int:
     flt = {"and": [
         {"property": "인스타상태", "select": {"equals": "인스타완료"}},
@@ -129,6 +150,12 @@ def main():
 
     now = dt.datetime.now(KST)
     today = now.date().isoformat()
+
+    if not args.page and not args.dry_run:
+        blocked = recently_blocked(nc, ds_id, now)
+        if blocked:
+            print(f"최근 {COOLDOWN_HOURS}시간 안에 인스타 활동 제한 오류가 있어 이번 실행은 쉽니다: {blocked}")
+            return
 
     todo = candidates(nc, ds_id, today, now.hour, slots, args.page)
     if not args.page and not args.dry_run:
